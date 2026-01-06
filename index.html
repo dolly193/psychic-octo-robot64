@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolly | Rede Descentralizada</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* --- VARIÁVEIS & RESET --- */
+        :root {
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --surface-hover: #1f1f25;
+            --primary: #7f5af0;
+            --primary-glow: rgba(127, 90, 240, 0.4);
+            --text: #fffffe;
+            --text-dim: #94a1b2;
+            --success: #2cb67d;
+            --error: #ef4565;
+            --ease: cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Space Grotesk', sans-serif; outline: none; }
+        
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: hidden;
+        }
+
+        /* --- ANIMAÇÕES --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); filter: blur(10px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); filter: blur(5px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0px); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shake { 
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-2px, 2px) rotate(-1deg); }
+            50% { transform: translate(2px, -2px) rotate(1deg); }
+            75% { transform: translate(-2px, -2px) rotate(-1deg); }
+        }
+
+        /* --- CONSTRUCT ANIMATIONS --- */
+        @keyframes constructHeader {
+            0% { transform: translateY(-80px); opacity: 0; letter-spacing: 15px; filter: blur(20px); }
+            60% { opacity: 0.8; letter-spacing: 2px; }
+            100% { transform: translateY(0); opacity: 1; letter-spacing: normal; filter: blur(0); }
+        }
+        @keyframes constructBox {
+            0% { transform: perspective(1000px) rotateX(30deg) scale(0.8) translateY(100px); opacity: 0; filter: blur(20px); border-color: var(--primary); }
+            100% { transform: perspective(1000px) rotateX(0deg) scale(1) translateY(0); opacity: 1; filter: blur(0); border-color: rgba(255,255,255,0.05); }
+        }
+        @keyframes constructInput {
+            0% { transform: translateX(-30px); opacity: 0; clip-path: inset(0 100% 0 0); }
+            100% { transform: translateX(0); opacity: 1; clip-path: inset(0 0 0 0); }
+        }
+        @keyframes constructFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- COMPONENTES GERAIS --- */
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; width: 100%; flex: 1; display: flex; flex-direction: column; }
+        
+        header { 
+            display: flex; justify-content: space-between; align-items: center; padding: 30px 0; 
+            opacity: 0; /* Hidden initially for intro */
+        }
+        
+        .logo { font-size: 1.8rem; font-weight: 700; letter-spacing: -1px; color: var(--text); display: flex; align-items: center; gap: 15px; }
+        
+        .brand-symbol {
+            filter: drop-shadow(0 0 10px var(--primary-glow));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        button {
+            cursor: pointer; border: none; transition: all 0.3s var(--ease); font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 12px;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+        .btn-primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 30px var(--primary-glow); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-ghost { background: transparent; color: var(--text-dim); padding: 8px 16px; }
+        .btn-ghost:hover { color: var(--text); }
+
+        input {
+            width: 100%; padding: 15px; background: var(--surface); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px; color: var(--text); transition: 0.3s; margin-bottom: 15px;
+        }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-glow); }
+
+        /* --- AUTH SCREEN --- */
+        .auth-wrapper {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            /* Animation handled by JS class */
+        }
+        .auth-box {
+            background: var(--surface); padding: 40px; border-radius: 24px; width: 100%; max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .auth-title { font-size: 2rem; margin-bottom: 30px; text-align: center; }
+        .switch-auth { text-align: center; margin-top: 20px; color: var(--text-dim); font-size: 0.9rem; cursor: pointer; }
+        .switch-auth:hover { color: var(--primary); text-decoration: underline; }
+
+        /* --- DASHBOARD --- */
+        .dashboard { display: none; animation: fadeIn 0.8s var(--ease); width: 100%; }
+        
+        .grid-actions {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px;
+        }
+        
+        .card {
+            background: var(--surface); padding: 30px; border-radius: 20px; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.03); transition: 0.4s var(--ease);
+            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 15px;
+            animation: fadeIn 0.8s var(--ease) backwards;
+        }
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:hover { transform: translateY(-10px) scale(1.02); border-color: var(--primary); background: var(--surface-hover); box-shadow: 0 15px 40px -10px rgba(0,0,0,0.5); }
+        .card-icon { font-size: 2.5rem; margin-bottom: 10px; animation: float 3s infinite ease-in-out; }
+        .card h3 { font-size: 1.2rem; }
+        .card p { color: var(--text-dim); font-size: 0.9rem; }
+
+        /* --- FILE LIST --- */
+        .section-title { margin-bottom: 20px; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+        .file-list { display: flex; flex-direction: column; gap: 12px; }
+        
+        .file-item {
+            background: var(--surface); padding: 20px; border-radius: 16px; display: flex; justify-content: space-between;
+            align-items: center; transition: 0.3s; border: 1px solid transparent;
+            animation: fadeIn 0.5s var(--ease) backwards;
+        }
+        .file-item:hover { background: var(--surface-hover); transform: translateX(5px); border-color: rgba(255,255,255,0.1); }
+        .file-info { display: flex; flex-direction: column; gap: 5px; }
+        .file-name { font-weight: 600; }
+        .file-meta { font-size: 0.8rem; color: var(--text-dim); font-family: monospace; }
+        
+        .delete-btn {
+            background: rgba(239, 69, 101, 0.1); color: var(--error); padding: 8px 12px; border-radius: 8px;
+        }
+        .delete-btn:hover { background: var(--error); color: #fff; }
+
+        /* --- MODALS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px); z-index: 100; display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        
+        .modal-content {
+            background: var(--surface); padding: 40px; border-radius: 24px; width: 90%; max-width: 500px;
+            position: relative; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.9); transition: transform 0.3s var(--ease);
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        
+        .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; color: var(--text-dim); background: none; }
+        
+        .drop-zone {
+            border: 2px dashed var(--text-dim); border-radius: 16px; padding: 40px; text-align: center;
+            margin: 20px 0; transition: 0.3s; cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: rgba(127, 90, 240, 0.05); }
+
+        /* --- TOAST & LOADER --- */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px; background: var(--surface); padding: 15px 25px;
+            border-radius: 12px; border-left: 4px solid var(--primary); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transform: translateY(100px); transition: transform 0.4s var(--ease); z-index: 10001; font-weight: 600;
+        }
+        .toast.show { transform: translateY(0); }
+        .toast.error { border-left-color: var(--error); }
+
+        .loader {
+            width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+            border-radius: 50%; animation: spin 1s linear infinite; display: none; margin-left: 10px;
+        }
+        .btn-primary .loader { display: inline-block; vertical-align: middle; }
+
+        /* --- INTRO LOADER --- */
+        #intro-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s var(--ease), background-color 0.3s var(--ease);
+        }
+
+        
+        .shake-effect {
+            animation: shake 0.1s linear infinite;
+        }
+
+        /* Animação de Entrada (Pop) */
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .loader-shape {
+            width: 60px; height: 60px;
+            /* Animação composta: Entrada Pop + Morfologia Contínua */
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards, shapeMorph 4s infinite ease-in-out 0.6s;
+            transition: all 1.2s var(--ease);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; /* Garante forma circular base */
+        }
+        
+        .loader-shape svg {
+            filter: drop-shadow(0 0 15px var(--primary-glow));
+            width: 100%; height: 100%;
+            transition: all 0.5s ease-out; /* Transição para desintegração */
+        }
+
+        @keyframes shapeMorph {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            50% { transform: translateY(-20px) rotate(180deg) scale(1.1); }
+            100% { transform: translateY(0) rotate(360deg) scale(1); }
+        }
+
+        /* Estado final: A forma explode/dissolve para formar o título */
+        .forming-title .loader-shape:not(#survivor-shape) {
+            animation: none;
+            transform: scale(15) rotate(45deg); /* Expande e gira para preencher/sumir */
+            opacity: 0;
+            filter: blur(20px); /* Efeito de dissolução */
+        }
+
+        /* Survivor Shape Logic */
+        .forming-title #survivor-shape {
+            animation: none;
+            opacity: 1;
+            filter: blur(0);
+            position: absolute;
+            z-index: 20;
+            transition: all 0.6s var(--ease);
+            /* Mantém a forma inicial antes de transformar */
+            left: 50%; top: 50%; transform: translate(-50%, -50%);
+        }
+
+        /* Estado onde ele se move e vira o log */
+        .forming-title.move-survivor #survivor-shape {
+            top: 50%; /* Alinhado ao meio verticalmente */
+            left: calc(50% + 240px); /* Vai para o LADO do título (Direita) */
+            width: 260px;
+            height: auto;
+            min-height: 140px;
+            border-radius: 16px;
+            background: rgba(22, 22, 26, 0.9);
+            border: 1px solid rgba(127, 90, 240, 0.3);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(0, -50%); /* Centraliza verticalmente apenas */
+        }
+
+        .forming-title #intro-end {
+            display: block;
+        }
+
+        #intro-end { 
+            display: none; text-align: center; 
+            /* O título surge do "blur" deixado pela forma */
+            animation: titleReveal 1.5s var(--ease) forwards; 
+        }
+
+        @keyframes titleReveal {
+            0% { opacity: 0; letter-spacing: 15px; filter: blur(15px); transform: scale(0.9); }
+            100% { opacity: 1; letter-spacing: 4px; filter: blur(0); transform: scale(1); }
+        }
+
+        .store-title { 
+            font-size: 3rem; font-weight: 700; margin-bottom: 30px; position: relative;
+            letter-spacing: 4px; color: var(--text); text-shadow: 0 0 30px var(--primary-glow);
+        }
+        
+        /* --- SITE ENTERED STATE --- */
+        body.site-entered header {
+            animation: constructHeader 1.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+        }
+        body.site-entered .auth-box {
+            animation: constructBox 1.5s cubic-bezier(0.19, 1, 0.22, 1) 0.4s backwards;
+        }
+        /* Sequência de construção interna */
+        body.site-entered .auth-box input:nth-of-type(1) {
+            animation: constructInput 1s var(--ease) 1.0s backwards;
+        }
+        body.site-entered .auth-box input:nth-of-type(2) {
+            animation: constructInput 1s var(--ease) 1.2s backwards;
+        }
+        body.site-entered .auth-box button {
+            animation: constructFade 1s var(--ease) 1.4s backwards;
+        }
+        body.site-entered .switch-auth,
+        body.site-entered .btn-ghost {
+            animation: constructFade 1s var(--ease) 1.6s backwards;
+        }
+
+        /* Flash Effect */
+        #flash-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff;
+            z-index: 10000; pointer-events: none; opacity: 0; transition: opacity 0.6s ease-out;
+        }
+
+        /* --- TERMS SCREEN --- */
+        #terms-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a0c; z-index: 10005;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px; text-align: center;
+            transition: opacity 0.5s var(--ease);
+        }
+        .terms-content { max-width: 800px; animation: scaleIn 0.8s var(--ease); }
+        .terms-content h1 { font-size: 4rem; margin-bottom: 30px; color: var(--primary); letter-spacing: -2px; font-weight: 700; text-transform: uppercase; }
+        .terms-content p { font-size: 1.2rem; color: var(--text-dim); margin-bottom: 50px; line-height: 1.8; }
+
+        /* --- SUPPORT WIDGET --- */
+        #support-widget {
+            position: fixed; bottom: 30px; left: 30px; z-index: 10002;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        
+        #support-btn {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: var(--primary); color: #fff; font-size: 1.8rem;
+            box-shadow: 0 10px 30px var(--primary-glow);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s var(--ease);
+            animation: float 6s ease-in-out infinite;
+        }
+        #support-btn:hover { transform: scale(1.1) rotate(10deg); }
+        
+        #support-window {
+            position: absolute; bottom: 80px; left: 0;
+            width: 320px; height: 450px;
+            background: rgba(22, 22, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            transform-origin: bottom left;
+            transform: scale(0); opacity: 0;
+            transition: all 0.4s var(--ease);
+        }
+        #support-window.active { transform: scale(1); opacity: 1; }
+        
+        .support-header {
+            padding: 20px; background: rgba(127, 90, 240, 0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 700; color: var(--primary);
+        }
+        
+        #chat-messages {
+            flex: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        
+        .message {
+            padding: 12px 16px; border-radius: 12px; font-size: 0.9rem;
+            max-width: 85%; line-height: 1.5;
+            animation: fadeIn 0.3s var(--ease);
+        }
+        .message.bot {
+            background: rgba(255,255,255,0.05); color: var(--text);
+            align-self: flex-start; border-bottom-left-radius: 2px;
+        }
+        .message.user {
+            background: var(--primary); color: #fff;
+            align-self: flex-end; border-bottom-right-radius: 2px;
+        }
+        
+        .support-input {
+            padding: 15px; border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex; gap: 10px;
+        }
+        .support-input input {
+            margin: 0; padding: 10px; font-size: 0.9rem; background: rgba(0,0,0,0.2);
+        }
+        .support-input button {
+            background: var(--primary); color: #fff; width: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- TELA DE TERMOS -->
+    <div id="terms-screen">
+        <div class="terms-content">
+            <h1>Termos de Uso</h1>
+            <p>Este sistema opera como uma rede descentralizada de compartilhamento de arquivos. 
+            Todo o conteúdo hospedado ou compartilhado é de responsabilidade exclusiva dos usuários. 
+            Ao acessar o <strong>DOLLY TRT</strong>, você concorda em não utilizar a plataforma para fins ilícitos 
+            e reconhece que os administradores não possuem controle sobre os dados trafegados via Magnet Links.</p>
+            <button class="btn-primary" onclick="acceptTerms()" style="font-size: 1.1rem; padding: 15px 40px;">LI E CONCORDO</button>
+        </div>
+    </div>
+
+    <!-- SUPPORT WIDGET -->
+    <div id="support-widget">
+        <button id="support-btn" onclick="toggleSupport()">🤖</button>
+        <div id="support-window" id="support-window">
+            <div class="support-header">
+                <span>IA de Controle</span>
+                <button onclick="toggleSupport()" style="background:none; border:none; color:white; font-size:1.2rem;">&times;</button>
+            </div>
+            <div id="chat-messages">
+                <div class="message bot">Olá. Sou a IA do sistema. Tenho controle total e estou operando com cautela. Como posso ajudar?</div>
+            </div>
+            <div class="support-input">
+                <input type="text" id="chat-input" placeholder="Digite seu comando..." onkeypress="handleChatKey(event)">
+                <button onclick="sendChatMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA DE LOADING / INTRO -->
+    <div id="intro-screen">
+        <div id="shapes-container" style="display: flex; gap: 20px; align-items: center;"></div>
+        <div id="intro-end">
+            <div class="store-title">[DOLLY TRT]</div>
+            <button class="btn-primary" onclick="enterSite()" style="font-size: 1.2rem; padding: 15px 40px; margin-top: 10px;">ENTRAR</button>
+        </div>
+    </div>
+    
+    <div id="flash-overlay"></div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg class="brand-symbol" width="42" height="42" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 2L4.4 11V29L20 38L35.6 29V11L20 2Z" fill="rgba(127, 90, 240, 0.15)" stroke="#7f5af0" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M22 10L13 21H21L17 31" stroke="#fffffe" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Dolly
+            </div>
+            <div id="user-nav" style="display: none;">
+                <span id="username-display" style="margin-right: 15px; color: var(--text-dim);"></span>
+                <button onclick="logout()" class="btn-ghost">Sair</button>
+            </div>
+        </header>
+
+        <!-- LOGIN / REGISTER -->
+        <div id="auth-section" class="auth-wrapper">
+            <div class="auth-box" id="login-box">
+                <h2 class="auth-title">Bem-vindo</h2>
+                <form onsubmit="handleLogin(event)">
+                    <input type="text" id="login-user" placeholder="Usuário" required>
+                    <input type="password" id="login-pass" placeholder="Senha" required>
+                    <button type="submit" class="btn-primary" style="width: 100%">Entrar <div class="loader"></div></button>
+                </form>
+                <div class="switch-auth" onclick="toggleAuth('register')">Não tem conta? Crie agora</div>
+            </div>
+
+            <div class="auth-box" id="register-box" style="display: none;">
+                <h2 class="auth-title">Criar Conta</h2>
+                <form onsubmit="handleRegister(event)">
+                    <input type="text" id="reg-user" placeholder="Usuário" required>
+                    <input type="password" id="reg-pass" placeholder="Senha" required>
+                    <button type="submit" class="btn-primary" style="width: 100%">Registrar <div class="loader"></div></button>
+                </form>
+                <div class="switch-auth" onclick="toggleAuth('login')">Já tem conta? Faça login</div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: center; animation: fadeIn 1s var(--ease);">
+                <button class="btn-ghost" onclick="openModal('dolly-modal')" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 24px;">
+                    📜 Importar arquivo .dolly (Sem Login)
+                </button>
+            </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dashboard-section" class="dashboard">
+            <div class="grid-actions">
+                <div class="card" id="card-upload" onclick="openModal('upload-modal')">
+                    <div class="card-icon">☁️</div>
+                    <h3>Upload</h3>
+                    <p>Guarde seus arquivos</p>
+                </div>
+                <div class="card" id="card-torrent" onclick="openModal('torrent-modal')">
+                    <div class="card-icon">🧲</div>
+                    <h3>Torrent</h3>
+                    <p>Baixar via Magnet</p>
+                </div>
+                <div class="card" onclick="openModal('dolly-modal')">
+                    <div class="card-icon">📜</div>
+                    <h3>Ler .dolly</h3>
+                    <p>Importar metadados</p>
+                </div>
+            </div>
+
+            <!-- ADMIN PANEL (Injetado via JS se for admin) -->
+            <div id="admin-section" style="display:none; margin-bottom: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <div class="section-title">🛡️ Painel Admin - Pendentes</div>
+                <div id="pending-list" class="file-list"></div>
+            </div>
+
+            <div class="section-title">📂 Meus Arquivos</div>
+            <div id="file-list" class="file-list">
+                <!-- Lista injetada via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="upload-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('upload-modal')">&times;</button>
+            <h2>Upload de Arquivo</h2>
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <p>Clique ou arraste arquivos aqui</p>
+                <input type="file" id="file-input" hidden onchange="handleFileUpload(this.files[0])">
+            </div>
+            <p id="upload-status" style="text-align: center; color: var(--text-dim); font-size: 0.9rem;"></p>
+            <!-- Barra de Progresso -->
+            <div id="progress-container" style="display:none; width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; height: 6px; margin-top: 15px; overflow: hidden;">
+                <div id="progress-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.1s linear; box-shadow: 0 0 10px var(--primary);"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="torrent-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('torrent-modal')">&times;</button>
+            <h2>Adicionar Torrent</h2>
+            <p style="color: var(--text-dim); margin-bottom: 15px;">Cole o Magnet Link abaixo para iniciar o download no servidor.</p>
+            <input type="text" id="magnet-input" placeholder="magnet:?xt=urn:btih:...">
+            <button class="btn-primary" style="width: 100%" onclick="handleMagnet()">Iniciar Download</button>
+        </div>
+    </div>
+
+    <div id="dolly-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('dolly-modal')">&times;</button>
+            <h2>Ler Arquivo .dolly</h2>
+            <div class="drop-zone" onclick="document.getElementById('dolly-input').click()">
+                <p>Selecione o arquivo .dolly</p>
+                <input type="file" id="dolly-input" hidden accept=".dolly" onchange="handleDollyRead(this.files[0])">
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // --- ESTADO & UTILITÁRIOS ---
+        const API = {
+            login: '/login',
+            register: '/register',
+            files: '/my_files',
+            upload: '/criar_dolly',
+            magnet: '/add_magnet',
+            readDolly: '/ler_dolly',
+            delete: '/delete_file',
+            adminPending: '/admin/pending_users',
+            adminApprove: '/admin/approve',
+            session: '/check_session'
+        };
+
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = isError ? 'toast show error' : 'toast show';
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function toggleAuth(view) {
+            document.getElementById('login-box').style.display = view === 'login' ? 'block' : 'none';
+            document.getElementById('register-box').style.display = view === 'register' ? 'block' : 'none';
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // --- LÓGICA DE AUTH ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const loader = btn.querySelector('.loader');
+            loader.style.display = 'inline-block';
+
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+
+            try {
+                const res = await fetch(API.login, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    document.getElementById('auth-section').style.display = 'none';
+                    document.getElementById('dashboard-section').style.display = 'block';
+                    document.getElementById('user-nav').style.display = 'flex';
+                    document.getElementById('username-display').textContent = user;
+                    
+                    // Lógica de Permissão Visual
+                    const userData = data.user;
+                    if (userData.is_admin) {
+                        document.getElementById('admin-section').style.display = 'block';
+                        loadPendingUsers();
+                    }
+                    
+                    if (!userData.is_approved && !userData.is_admin) {
+                        lockFeature('card-upload');
+                        lockFeature('card-torrent');
+                        showToast('Conta aguardando aprovação. Uploads bloqueados.', true);
+                    }
+
+                    loadFiles();
+                } else {
+                    showToast(data.error || 'Erro no login', true);
+                }
+            } catch (err) { showToast('Erro de conexão', true); }
+            loader.style.display = 'none';
+        }
+
+        function lockFeature(elementId) {
+            const el = document.getElementById(elementId);
+            el.style.opacity = '0.5';
+            el.style.cursor = 'not-allowed';
+            el.onclick = () => showToast('Funcionalidade restrita a usuários aprovados.', true);
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const user = document.getElementById('reg-user').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            try {
+                const res = await fetch(API.register, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Conta criada! Faça login.');
+                    toggleAuth('login');
+                } else {
+                    showToast(data.error, true);
+                }
+            } catch (err) { showToast('Erro ao registrar', true); }
+        }
+
+        function logout() {
+            fetch('/logout');
+            location.reload();
+        }
+
+        // --- ARQUIVOS ---
+        async function loadFiles() {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '<p style="text-align:center; color:var(--text-dim)">Carregando...</p>';
+            
+            try {
+                const res = await fetch(API.files);
+                if (!res.ok) throw new Error();
+                const files = await res.json();
+                
+                list.innerHTML = '';
+                if (files.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color:var(--text-dim); padding:20px;">Nenhum arquivo encontrado.</p>';
+                    return;
+                }
+
+                files.forEach((f, index) => {
+                    const sizeMB = (f.size_bytes / 1024 / 1024).toFixed(2);
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.style.animationDelay = `${index * 0.1}s`;
+                    div.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-name">${f.filename}</span>
+                            <span class="file-meta">${sizeMB} MB • Hash: ${f.hash.substring(0, 8)}...</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteFile('${f.hash}')">Excluir</button>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (e) {
+                list.innerHTML = '<p style="text-align:center; color:var(--error)">Erro ao carregar arquivos.</p>';
+            }
+        }
+
+        async function deleteFile(hash) {
+            if(!confirm('Tem certeza?')) return;
+            const res = await fetch(`${API.delete}/${hash}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast('Arquivo deletado');
+                loadFiles();
+            } else {
+                showToast('Erro ao deletar', true);
+            }
+        }
+
+        // --- ADMIN ---
+        async function loadPendingUsers() {
+            const list = document.getElementById('pending-list');
+            try {
+                const res = await fetch(API.adminPending);
+                const users = await res.json();
+                
+                list.innerHTML = '';
+                if (users.length === 0) {
+                    list.innerHTML = '<p style="color:var(--text-dim)">Nenhum usuário pendente.</p>';
+                    return;
+                }
+
+                users.forEach(u => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.innerHTML = `
+                        <span class="file-name">${u.username}</span>
+                        <button class="btn-primary" style="padding: 5px 15px; font-size: 0.8rem;" onclick="approveUser(${u.id})">Aprovar</button>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function approveUser(id) {
+            await fetch(`${API.adminApprove}/${id}`, { method: 'POST' });
+            showToast('Usuário aprovado!');
+            loadPendingUsers();
+        }
+
+        // --- UPLOAD & TORRENT ---
+        function handleFileUpload(file) {
+            if (!file) return;
+            
+            const status = document.getElementById('upload-status');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            
+            status.textContent = `Preparando ${file.name}...`;
+            status.style.color = 'var(--text-dim)';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', API.upload, true);
+            xhr.responseType = 'blob'; // Importante para receber o arquivo .dolly
+
+            // Evento de Progresso
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percent = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percent + '%';
+                    
+                    if (percent < 100) {
+                        status.textContent = `Enviando: ${Math.round(percent)}%`;
+                    } else {
+                        status.textContent = 'Processando no servidor (Salvando no Banco)...';
+                    }
+                }
+            };
+
+            // Evento de Conclusão
+            xhr.onload = async function() {
+                if (xhr.status === 200) {
+                    // Sucesso: Baixar o .dolly
+                    const blob = xhr.response;
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = file.name + ".dolly";
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    showToast('Upload concluído! .dolly baixado.');
+                    closeModal('upload-modal');
+                    loadFiles();
+                    
+                    // Reset
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        status.textContent = '';
+                    }, 1000);
+                } else {
+                    // Erro: Ler o JSON do blob
+                    const text = await xhr.response.text();
+                    try {
+                        const err = JSON.parse(text);
+                        showToast(err.error || 'Erro no upload', true);
+                        status.textContent = 'Erro: ' + (err.error || 'Falha no upload');
+                        status.style.color = 'var(--error)';
+                    } catch (e) {
+                        showToast('Erro desconhecido', true);
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                showToast('Erro de conexão', true);
+                status.textContent = 'Falha na conexão.';
+                status.style.color = 'var(--error)';
+            };
+
+            xhr.send(formData);
+        }
+
+        async function handleMagnet() {
+            const link = document.getElementById('magnet-input').value;
+            if (!link) return;
+            
+            const res = await fetch(API.magnet, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ magnet_link: link })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Download iniciado em background!');
+                closeModal('torrent-modal');
+            } else {
+                showToast(data.error, true);
+            }
+        }
+
+        async function handleDollyRead(file) {
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('dolly_file', file);
+            
+            const res = await fetch(API.readDolly, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if (res.ok) {
+                closeModal('dolly-modal');
+                if(confirm(`Arquivo encontrado: ${data.file_info.original_name}\nDeseja baixar o conteúdo real?`)) {
+                    window.location.href = data.download_url;
+                }
+            } else {
+                showToast(data.error, true);
+            }
+        }
+
+        // Drag and Drop visual
+        const dz = document.getElementById('drop-zone');
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dz.classList.remove('dragover');
+            handleFileUpload(e.dataTransfer.files[0]);
+        });
+
+        // --- INTRO LOGIC ---
+        function acceptTerms() {
+            const terms = document.getElementById('terms-screen');
+            terms.style.opacity = '0';
+            setTimeout(() => {
+                terms.remove();
+                startIntroAnimation();
+            }, 500);
+        }
+
+        function startIntroAnimation() {
+            const container = document.getElementById('shapes-container');
+            let count = 0;
+            
+            // Função para adicionar formas gradualmente
+            const addShape = () => {
+                const shape = document.createElement('div');
+                shape.className = 'loader-shape';
+                // Injeta o SVG do símbolo
+                shape.innerHTML = `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 2L4.4 11V29L20 38L35.6 29V11L20 2Z" fill="rgba(127, 90, 240, 0.15)" stroke="#7f5af0" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M22 10L13 21H21L17 31" stroke="#fffffe" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>`;
+                if (count === 4) shape.id = 'survivor-shape'; // O 5º elemento (índice 4) será o sobrevivente
+                // Removido delay negativo para permitir a animação de entrada "Pop" funcionar corretamente
+                shape.style.animationDelay = `${count * 0.2}s`; // Sequencial
+                container.appendChild(shape);
+                count++;
+            };
+            addShape(); // Adiciona a primeira
+
+            const interval = setInterval(() => {
+                if (count >= 5) {
+                    clearInterval(interval);
+                    // Espera um pouco com as 5 formas e explode
+                    const screen = document.getElementById('intro-screen');
+                    screen.classList.add('shake-effect'); // Treme a tela antes de explodir
+                    setTimeout(() => {
+                        screen.classList.remove('shake-effect');
+                        screen.classList.add('forming-title');
+                        
+                        // Lógica do Sobrevivente (Log de Atualização)
+                        const survivor = document.getElementById('survivor-shape');
+                        
+                        setTimeout(() => {
+                            // Vai para o lugar final (Ao lado do título)
+                            survivor.style.left = ''; // Limpa estilos inline para o CSS da classe assumir
+                            survivor.style.top = '';
+                            screen.classList.add('move-survivor');
+                            
+                            setTimeout(() => {
+                                survivor.innerHTML = `
+                                    <div class="log-content" style="opacity: 0; transition: opacity 0.5s;">
+                                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 10px; font-size: 1.1rem;">Novidades v2.1</div>
+                                        <div style="color: var(--text-dim); margin-bottom: 5px;">• Suporte a Magnet Links</div>
+                                        <div style="color: var(--text-dim); margin-bottom: 5px;">• Interface Minimalista</div>
+                                        <div style="color: var(--text-dim);">• Upload Otimizado</div>
+                                    </div>
+                                `;
+                                requestAnimationFrame(() => survivor.querySelector('.log-content').style.opacity = '1');
+                            }, 500); // Tempo para a desintegração visual acontecer
+                        }, 100); // Inicia movimento logo após a explosão dos outros
+                    }, 800);
+                } else {
+                    if (count === 3) {
+                        document.getElementById('intro-screen').style.backgroundColor = 'var(--bg)';
+                    }
+                    addShape();
+                }
+            }, 800);
+        }
+
+        async function enterSite() {
+            const btn = document.querySelector('#intro-end button');
+            const originalText = btn.textContent;
+            
+            // Estilo de carregamento
+            btn.disabled = true;
+            btn.style.opacity = '0.8';
+            btn.style.cursor = 'wait';
+            
+            const steps = [
+                { msg: "Verificando rede...", check: () => navigator.onLine },
+                { msg: "Carregando módulos...", check: () => document.readyState !== 'loading' },
+                { msg: "Conectando ao banco...", check: async () => {
+                    try {
+                        const res = await fetch('/status');
+                        return res.ok;
+                    } catch { return false; }
+                }}
+            ];
+
+            for (const step of steps) {
+                btn.innerHTML = `${step.msg} <div class="loader" style="display:inline-block"></div>`;
+                // Pequeno delay artificial para o usuário ver o que está acontecendo
+                await new Promise(r => setTimeout(r, 600));
+                
+                const result = await step.check();
+                if (!result) {
+                    btn.innerHTML = "❌ Falha: " + step.msg.replace('Verificando ', '').replace('Conectando ao ', '');
+                    btn.style.color = 'var(--error)';
+                    showToast("Erro na verificação do sistema!", true);
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.color = '#fff';
+                        btn.style.cursor = 'pointer';
+                    }, 2000);
+                    return;
+                }
+            }
+
+            // Verifica sessão silenciosamente antes de liberar
+            let sessionData = null;
+            try {
+                const res = await fetch(API.session);
+                if (res.ok) sessionData = await res.json();
+            } catch (e) {}
+
+            btn.textContent = "ACESSO AUTORIZADO";
+            btn.style.color = 'var(--success)';
+            
+            setTimeout(() => {
+                // Flash Effect
+                const flash = document.getElementById('flash-overlay');
+                flash.style.opacity = '1';
+                
+                const screen = document.getElementById('intro-screen');
+                
+                setTimeout(() => {
+                    // Se já estiver logado, configura a interface e pula o login
+                    if (sessionData && sessionData.logged_in) {
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('dashboard-section').style.display = 'block';
+                        document.getElementById('user-nav').style.display = 'flex';
+                        document.getElementById('username-display').textContent = sessionData.user.username;
+                        
+                        const u = sessionData.user;
+                        if (u.is_admin) {
+                            document.getElementById('admin-section').style.display = 'block';
+                            loadPendingUsers();
+                        }
+                        if (!u.is_approved && !u.is_admin) {
+                            lockFeature('card-upload');
+                            lockFeature('card-torrent');
+                        }
+                        loadFiles();
+                    }
+
+                    screen.remove();
+                    flash.style.opacity = '0'; // Fade out flash revealing the site
+                    document.body.classList.add('site-entered');
+                }, 600);
+            }, 500);
+        }
+
+        // --- AUTO LOGIN (SKIP INTRO) ---
+        window.addEventListener('load', async () => {
+            try {
+                const res = await fetch(API.session);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.logged_in) {
+                        // Remove telas de intro e termos
+                        const terms = document.getElementById('terms-screen');
+                        const intro = document.getElementById('intro-screen');
+                        if (terms) terms.remove();
+                        if (intro) intro.remove();
+                        
+                        document.body.classList.add('site-entered');
+
+                        // Configura Dashboard
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('dashboard-section').style.display = 'block';
+                        document.getElementById('user-nav').style.display = 'flex';
+                        document.getElementById('username-display').textContent = data.user.username;
+                        
+                        const u = data.user;
+                        if (u.is_admin) {
+                            document.getElementById('admin-section').style.display = 'block';
+                            loadPendingUsers();
+                        }
+                        if (!u.is_approved && !u.is_admin) {
+                            lockFeature('card-upload');
+                            lockFeature('card-torrent');
+                        }
+                        loadFiles();
+                    }
+                }
+            } catch (e) {}
+        });
+
+        // --- SUPPORT CHAT ---
+        function toggleSupport() {
+            const win = document.getElementById('support-window');
+            win.classList.toggle('active');
+            if(win.classList.contains('active')) {
+                document.getElementById('chat-input').focus();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            
+            // Add User Message
+            addMessage(msg, 'user');
+            input.value = '';
+            
+            // Simulate thinking
+            const thinkingId = addMessage('Processando...', 'bot', true);
+            
+            try {
+                const res = await fetch('/support/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await res.json();
+                
+                // Remove thinking and add response
+                document.getElementById(thinkingId).remove();
+                addMessage(data.response, 'bot');
+            } catch (e) {
+                document.getElementById(thinkingId).remove();
+                addMessage('Erro de conexão com o núcleo da IA.', 'bot');
+            }
+        }
+
+        function addMessage(text, type, isThinking = false) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = text;
+            if (isThinking) {
+                div.id = 'thinking-' + Date.now();
+                div.style.opacity = '0.7';
+                div.style.fontStyle = 'italic';
+            }
+            const container = document.getElementById('chat-messages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div.id;
+        }
+
+        function handleChatKey(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
+    </script>
+</body>
+</html>
